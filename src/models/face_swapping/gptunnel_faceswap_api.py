@@ -38,7 +38,7 @@ class GptunnelFaceswapApi(FaceSwapModelApi):
         task = GptunnelFaceswaptask(response.json()["id"], self.api_key)
         return task
 
-    def swap_faces(self, img1_path: str, img2_path: str) -> np.ndarray:
+    def swap_faces(self, img1_path: str, img2_path: str) -> str:
         task = self.create_faceswap_task(img1_path, img2_path)
 
         while task.get_status() != "done":
@@ -52,5 +52,5 @@ class GptunnelFaceswapApi(FaceSwapModelApi):
         output_image_path = os.path.join(self.output_dir, task.index + ".jpg")
         ImageLoader.download_image(image_url, output_image_path)
 
-        output_image = np.array(Image.open(output_image_path))
-        return output_image
+        # output_image = np.array(Image.open(output_image_path))
+        return output_image_path

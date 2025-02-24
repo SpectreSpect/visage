@@ -6,5 +6,5 @@ class ImageGenModel(ABC):
 		self.output_dir = "output"
 		
 
-	def generate_image(self, prompt: str) -> np.ndarray:
+	def generate_image(self, prompt: str, source_image_path: str = None) -> str:
 		pass
