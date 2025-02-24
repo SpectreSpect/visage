@@ -27,6 +27,8 @@ wandb
 
 tmp/
 
+output/
+
 data/
 
 logs/
