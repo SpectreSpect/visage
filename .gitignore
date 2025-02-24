@@ -25,10 +25,10 @@ venv/
 # Integration
 wandb
 
-tmp/
+/tmp/
 
-output/
+/output/
 
-data/
+/data/
 
-logs/
+/logs/
