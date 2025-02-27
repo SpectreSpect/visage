@@ -3,7 +3,7 @@ import numpy as np
 
 class FaceSwapModel(ABC):
 	def __init__(self):
-		self.output_dir = "output"
+		pass
 
-	def swap_faces(self, img1_path: str, img2_path: str) -> str:
+	def swap_faces(self, img1_path: str, img2_path: str, save_dir: str = "output") -> str:
 		pass

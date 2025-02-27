@@ -1,5 +1,7 @@
 from src.models.data.gptunnel_task import GptunnelTask
 import requests
+import logging
+
 
 class GptunnelMidjourneyUpscaleTask(GptunnelTask):
 
@@ -9,21 +11,40 @@ class GptunnelMidjourneyUpscaleTask(GptunnelTask):
     
     def get_status(self) -> str:
         url = "https://gptunnel.ru/v1/midjourney/result"
-        headers = {
-            "Authorization": self.api_key
-        }
+        return self._get_gptunnel_status(url, {"taskId": self.index})
 
-        response = requests.get(url + "?taskId=" + self.index, headers=headers)
+        # json_response = self._make_json_get_request(url + "?taskId=" + self.index, headers={"Authorization": self.api_key})
 
-        return response.json()["status"]
+        # if "status" not in json_response:
+        #     error_msg = "Status not found in the response"
+
+        #     if self.debug:
+        #         raise RuntimeError(error_msg)
+        #     else:
+        #         logging.error(error_msg)
+        #         return None
+
+        # return json_response["status"]
 
 
     def get_result(self):
         url = "https://gptunnel.ru/v1/midjourney/result"
-        headers = {
-            "Authorization": self.api_key
-        }
+        json_response = self._get_gptunnel_result(url, {"taskId": self.index})
 
-        response = requests.get(url + "?taskId=" + self.index, headers=headers)
+        if "result" not in json_response:
+            error_msg = "Result not found in the response"
+            
+            if self.debug:
+                raise RuntimeError(error_msg)
+            else:
+                logging.error(error_msg)
+                return None
 
-        return response.json()["result"]
+
+        # headers = {
+        #     "Authorization": self.api_key
+        # }
+
+        # response = requests.get(url + "?taskId=" + self.index, headers=headers)
+
+        return json_response["result"]
