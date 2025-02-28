@@ -11,6 +11,7 @@ class GptunnelFaceSwapApi(BaseApiClient):
     
     def __init__(self, api_key, retries=3, backoff=2):
         super().__init__("https://gptunnel.ru", api_key, retries, backoff)
+        self.session.headers.update({"Authorization": self.api_key})
     
     def create(self, source_image: np.ndarray, face_image: np.ndarray) -> dict:
         data = {

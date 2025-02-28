@@ -4,7 +4,7 @@ import os
 
 class ImageGenModel(BaseModel):
 	def __init__(self):
-		pass
+		super().__init__()
 
 	def generate_image(self, prompt: str, reference_image: np.ndarray = None) -> np.ndarray:
 		pass

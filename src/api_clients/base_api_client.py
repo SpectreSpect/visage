@@ -13,7 +13,6 @@ class BaseApiClient(ABC):
         self.retries = retries
         self.backoff = backoff
         self.session = requests.Session()
-        self.session.headers.update({"Authorization": self.api_key})
 
     def request(self, endpoint, method="POST", data=None, params=None, files=None, return_type="json", timeout=10):
         """Handles API requests with retries, error handling, and flexible response types."""
