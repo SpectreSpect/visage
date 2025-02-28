@@ -14,6 +14,17 @@ import io
 
 load_dotenv()
 
+logs_dir = "logs"
+reference_upload_dir = os.path.join(logs_dir, "uploads/reference")
+generated_upload_dir = os.path.join(logs_dir, "uploads/generated")
+face_swapped_upload_dir = os.path.join(logs_dir, "uploads/face_swapped")
+
+os.makedirs(logs_dir, exist_ok=True)
+os.makedirs(reference_upload_dir, exist_ok=True)
+os.makedirs(generated_upload_dir, exist_ok=True)
+os.makedirs(face_swapped_upload_dir, exist_ok=True)
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -32,13 +43,7 @@ debug = os.getenv("DEBUG", "False").lower() == "true"
 gptunnel_api_key = os.getenv("GPTUNNEL_API_KEY")
 imgbb_api_key = os.getenv("IMGBB_API_KEY")
 
-reference_upload_dir = "logs/uploads/reference"
-generated_upload_dir = "logs/uploads/generated"
-face_swapped_upload_dir = "logs/uploads/face_swapped"
 
-os.makedirs(reference_upload_dir, exist_ok=True)
-os.makedirs(generated_upload_dir, exist_ok=True)
-os.makedirs(face_swapped_upload_dir, exist_ok=True)
 
 image_gen_model = GptunnelMidjourneyModel(gptunnel_api_key, imgbb_api_key)
 faceswap_model = GptunnelFaceSwapModel(gptunnel_api_key)
