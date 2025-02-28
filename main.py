@@ -1,13 +1,15 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from PIL import Image, UnidentifiedImageError
-import io
+from src.models.image_generation.gptunnel_midjourney_model import GptunnelMidjourneyModel
+from src.models.face_swapping.gptunnel_faceswap_model import GptunnelFaceSwapModel
+from dotenv import load_dotenv
+from PIL import Image
+import logging
+import numpy as np
 import uuid
 import os
-from src.models.image_generation.gptunnel_midjourney_api import GptunnelMidjourneyApi
-from src.models.face_swapping.gptunnel_faceswap_api import GptunnelFaceswapApi
-from dotenv import load_dotenv
-import logging
+import io
 
 
 load_dotenv()
@@ -21,6 +23,7 @@ logging.basicConfig(
     ]
 )
 
+logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -32,52 +35,44 @@ debug = os.getenv("DEBUG", "False").lower() == "true"
 gptunnel_api_key = os.getenv("GPTUNNEL_API_KEY")
 imgbb_api_key = os.getenv("IMGBB_API_KEY")
 
-sent_reference_image_dir = "data/images/sent_reference_images"
-generated_image_dir = "data/images/generated_images"
+reference_upload_dir = "logs/uploads/reference"
+generated_upload_dir = "logs/uploads/generated"
+face_swapped_upload_dir = "logs/uploads/face_swapped"
 
+os.makedirs(reference_upload_dir, exist_ok=True)
+os.makedirs(generated_upload_dir, exist_ok=True)
+os.makedirs(face_swapped_upload_dir, exist_ok=True)
 
-os.makedirs(sent_reference_image_dir, exist_ok=True)
-os.makedirs(generated_image_dir, exist_ok=True)
-
-# image_path = r"data\images\Kirill.jpg"
-# prompt = "A full-body portrait of a cyberpunk man standing straight, looking directly into the camera. He wears a futuristic plaid shirt with neon-threaded patterns and high-tech details, paired with rugged cyber-enhanced jeans. His face has subtle cybernetic implants, and neon lights reflect in his intense gaze. The background features a vibrant, dystopian cityscape with holographic billboards and glowing skyscrapers. Cinematic lighting, ultra-realistic details, high contrast, 4K."
-
-midjourney_model = GptunnelMidjourneyApi(gptunnel_api_key, imgbb_api_key)
-faceswap_model = GptunnelFaceswapApi(gptunnel_api_key)
+image_gen_model = GptunnelMidjourneyModel(gptunnel_api_key, imgbb_api_key)
+faceswap_model = GptunnelFaceSwapModel(gptunnel_api_key)
 
 app = FastAPI()
 
-async def read_uploaded_image(image):
-    """Reads and validates an uploaded image file."""
+
+async def read_uploaded_image(image: UploadFile) -> np.ndarray:
+    """Reads, validates, and converts an uploaded image to a NumPy array."""
     try:
         reference_image_bytes = await image.read()
-        reference_image = Image.open(io.BytesIO(reference_image_bytes))
-        reference_image.verify()  # Check if the image is corrupted
-        reference_image = Image.open(io.BytesIO(reference_image_bytes))  # Reload after verify
+        image_stream = io.BytesIO(reference_image_bytes)
 
-        return reference_image  # Successfully loaded image
+        reference_image = Image.open(image_stream)
+        reference_image.verify()  # ✅ Checks if image is valid
 
-    except UnidentifiedImageError as e:
-        error_msg = "Uploaded file is not a valid image format."
+        image_stream.seek(0)  # Reset file pointer
+        reference_image = Image.open(image_stream).convert("RGB")  # Ensure consistency
+        return np.array(reference_image)  # ✅ Convert to NumPy array
+    except UnidentifiedImageError:
+        raise HTTPException(status_code=400, detail="Invalid image format.")
     except OSError as e:
-        error_msg = f"Error reading image: {e}"
+        raise HTTPException(status_code=400, detail=f"Error reading image: {e}")
     except Exception as e:
-        error_msg = f"Unexpected error: {e}"
-
-    if debug:
-        raise RuntimeError(error_msg)
-    else:
-        logging.error(error_msg)
-        return None
+        raise e
 
 
 @app.get("/")
-def read_root():
-    return {"message": "Hello, World!"}
+async def read_root():
+    return JSONResponse(status_code=200, content={"message": "Welcome to the Visage API!"})
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "query": q}
 
 @app.post("/generate")
 async def generate(prompt: str = Form(...), image: UploadFile = File(...)):
@@ -85,23 +80,30 @@ async def generate(prompt: str = Form(...), image: UploadFile = File(...)):
     Accepts an image file and a text prompt, processes them, 
     and returns a generated image.
     """
-    logging.info(f"Received a request to generate an image with the prompt: {prompt}")
+    request_id = uuid.uuid4().hex
+    logging.info(f"New generation request: {request_id}")
 
-    # reference_image = await read_uploaded_image(image)
+    try:
+        reference_image = await read_uploaded_image(image)
+        Image.fromarray(reference_image).save(os.path.join(reference_upload_dir, f"{request_id}.png"))
 
-    # Read the uploaded image
-    reference_image_bytes = await image.read()
-    reference_image = Image.open(io.BytesIO(reference_image_bytes))
+        generated_image = image_gen_model.generate_image(prompt, reference_image)
+        Image.fromarray(generated_image).save(os.path.join(generated_upload_dir, f"{request_id}.png"))
+    
+        face_swapped_image = faceswap_model.swap_faces(generated_image, reference_image)
+        Image.fromarray(face_swapped_image).save(os.path.join(face_swapped_upload_dir, f"{request_id}.png"))
 
-    reference_image_name = f"{uuid.uuid4().hex}.jpg"
-    reference_image_path = os.path.join(sent_reference_image_dir, reference_image_name)
-    reference_image.save(reference_image_path)
+        img_io = io.BytesIO()
+        Image.fromarray(face_swapped_image).save(img_io, format="PNG")
+        img_io.seek(0)
 
-    generated_image_path = midjourney_model.generate_image(prompt, reference_image_path, save_dir=generated_image_dir)
-    if generated_image_path is None:
-        error_msg = "Midjourney failed to generate the image"
-        logging.error(error_msg)
-        return HTTPException(status_code=500, detail=error_msg)
-    result_image_path = faceswap_model.swap_faces(generated_image_path, reference_image_path, save_dir=generated_image_dir)
+        logging.info(f"Successfully processed request {request_id}")
+        return StreamingResponse(img_io, media_type="image/png")
+    except Exception as e:
+        if debug:
+            raise e
+        
+        logging.exception(f"Image processing failed (request_id={request_id}): {e}")
 
-    return FileResponse(result_image_path, media_type="image/png")
+        error_msg = str(e) if debug else "An internal error occurred."
+        return JSONResponse(status_code=500, content={"error": f"Image processing failed: {error_msg}"})

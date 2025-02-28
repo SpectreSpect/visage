@@ -24,23 +24,33 @@ class GptunnelMidjourneyModel(ImageGenModel):
             prompt += f" --cref {reference_image_url}"
         
         json_response = self.api_client.imagine(prompt)
-        task_id: str = json_response["id"]
+        generation_task_id: str = json_response["id"]
 
-        t1 = time.time()
-        while True:
-            json_response = self.api_client.result(task_id)
+        self.api_client.wait_for_task_completion(generation_task_id, self.generate_image_timeout)
+        
+        json_response = self.api_client.upsample(generation_task_id)
+        upsampling_task_id: str = json_response["id"]
 
-            if json_response["status"] == "done":
-                break
+        json_response = self.api_client.wait_for_task_completion(upsampling_task_id, self.generate_image_timeout)
 
-            if json_response["status"] == "failed":
-                raise RuntimeError("Image generation task failed.")
+        # t1 = time.time()
+        # while True:
+        #     json_response = self.api_client.result(task_id)
+
+        #     if json_response["status"] == "done":
+        #         break
+
+        #     if json_response["status"] == "failed":
+        #         raise RuntimeError("Image generation task failed.")
             
-            t2 = time.time()
-            if (t2 - t1) > self.generate_image_timeout:
-                raise TimeoutError(f"Image generation timed out. "
-                                   f"Exceeded timeout threshold of {self.generate_image_timeout} seconds.")
+        #     t2 = time.time()
+        #     if (t2 - t1) > self.generate_image_timeout:
+        #         raise TimeoutError(f"Image generation timed out. "
+        #                            f"Exceeded timeout threshold of {self.generate_image_timeout} seconds.")
 
-            time.sleep(self.status_check_delay)
+        #     time.sleep(self.status_check_delay)
+        
+        # json_response = self.api_client.upsample(task_id)
+
         
         return self.image_loader.load(json_response["result"])
