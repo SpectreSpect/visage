@@ -15,20 +15,17 @@ import io
 load_dotenv()
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("logs/app.log"),  # Write logs to file
-        logging.StreamHandler()  # Also print logs to console
+        logging.FileHandler("logs/app.log"), 
+        logging.StreamHandler()
     ]
 )
 
-logging.getLogger("PIL").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("uvicorn").setLevel(logging.WARNING)
-logging.getLogger("starlette").setLevel(logging.WARNING)
+for lib in ["urllib3", "requests", "httpx", "uvicorn", "starlette", "multipart", "httptools", "formparse"]:
+    logging.getLogger(lib).setLevel(logging.WARNING)
+
 
 debug = os.getenv("DEBUG", "False").lower() == "true"
 
