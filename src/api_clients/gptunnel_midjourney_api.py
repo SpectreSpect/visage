@@ -1,4 +1,5 @@
 from src.api_clients.base_api_client import BaseApiClient
+from src.utils.dict_utils import validate_dict
 import requests
 import time
 import logging
@@ -10,8 +11,9 @@ class GptunnelMidjourneyApi(BaseApiClient):
     def __init__(self, api_key, retries=3, backoff=2):
         super().__init__("https://gptunnel.ru", api_key, retries, backoff)
 
-    def imagine(self, prompt: str, reference_image_url: str) -> dict:
-        prompt += f" --cref {reference_image_url}"
+    def imagine(self, prompt: str, reference_image_url: str = None) -> dict:
+        if reference_image_url is not None:
+            prompt += f" --cref {reference_image_url}"
 
         json_response = self.request("/v1/midjourney/imagine", "POST", 
                                    data={"prompt": prompt}, return_type="json")

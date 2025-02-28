@@ -1,15 +1,32 @@
 import requests
+from PIL import Image
+from io import BytesIO
+import numpy as np
 
 class ImageLoader:
-    def __init__(self):
-        pass
+    """Utility class for loading images from URLs into memory as NumPy arrays."""
 
     @staticmethod
-    def download_image(url: str, file_path: str):
-        response = requests.get(url)
+    def load(url: str, timeout: int = 10) -> np.ndarray:
+        """
+        Loads an image from a URL into memory as a NumPy array.
 
-        if response.status_code == 200:
-            with open(file_path, "wb") as file:
-                file.write(response.content)
-        else:
-            print("Failed to download image. Status code:", response.status_code)
+        :param url: The image URL.
+        :param timeout: Maximum time (in seconds) to wait for a response.
+        :return: Image as a NumPy array.
+        :raises TimeoutError: If the request times out.
+        :raises RuntimeError: If the request fails or an unexpected error occurs.
+        """
+        try:
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+
+            image = Image.open(BytesIO(response.content))
+            return np.array(image)
+
+        except requests.Timeout:
+            raise TimeoutError(f"Image loading timed out after {timeout} seconds.")
+        except requests.RequestException as e:
+            raise RuntimeError(f"Failed to load image from {url}: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error while loading image from {url}: {e}")

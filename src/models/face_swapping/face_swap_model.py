@@ -1,9 +1,9 @@
-from abc import ABC
+from src.models.base_model import BaseModel
 import numpy as np
 
-class FaceSwapModel(ABC):
+class FaceSwapModel(BaseModel):
 	def __init__(self):
 		pass
 
-	def swap_faces(self, img1_path: str, img2_path: str, save_dir: str = "output") -> str:
+	def swap_faces(self, source_image: np.ndarray, face_image: np.ndarray) -> np.ndarray:
 		pass

@@ -1,10 +1,10 @@
-from abc import ABC
+from src.models.base_model import BaseModel
 import numpy as np
 import os
 
-class ImageGenModel(ABC):
+class ImageGenModel(BaseModel):
 	def __init__(self):
-		self.debug = os.getenv("DEBUG", "False").lower() == "true"
+		pass
 
-	def generate_image(self, prompt: str, source_image_path: str = None, save_dir: str = "output") -> str:
+	def generate_image(self, prompt: str, reference_image: np.ndarray = None) -> np.ndarray:
 		pass
